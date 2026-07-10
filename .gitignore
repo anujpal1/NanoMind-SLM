@@ -40,4 +40,4 @@ wandb/
 
 # Logs and temporary files
 *.log
-*.tmp
+*.tmpdata/tokenizer/

@@ -1,6 +1,6 @@
 dataset:
   id: "codeparrot/codeparrot-clean"
-  revision: "PASTE_THE_40_CHARACTER_REVISION_HERE"
+  revision: "35a59fb025bc0a102f7d96eac09d145b896d487b"
   split: "train"
   text_field: "content"
   streaming: true
