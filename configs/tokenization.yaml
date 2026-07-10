@@ -1,0 +1,20 @@
+tokenization:
+  context_length: 256
+  vocabulary_size: 8000
+  eos_token: "<eos>"
+  output_dtype: "uint16"
+  shard_token_limit: 1000000
+
+experiments:
+  baseline:
+    tokenizer: "artifacts/tokenizers/baseline/tokenizer.json"
+    train_corpus: "data/tokenizer/baseline_train.txt"
+    validation_corpus: "data/tokenizer/baseline_validation.txt"
+
+  quality:
+    tokenizer: "artifacts/tokenizers/quality/tokenizer.json"
+    train_corpus: "data/tokenizer/quality_train.txt"
+    validation_corpus: "data/tokenizer/quality_validation.txt"
+
+output:
+  directory: "data/tokenized"
