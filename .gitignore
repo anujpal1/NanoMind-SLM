@@ -1,0 +1,43 @@
+# Python-generated files
+__pycache__/
+*.py[cod]
+build/
+dist/
+wheels/
+*.egg-info
+
+# Virtual environments
+.venv/
+
+# Test and code-quality caches
+.pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Notebook-generated files
+.ipynb_checkpoints/
+
+# Local environment variables and secrets
+.env
+.env.*
+!.env.example
+
+# Downloaded and processed datasets
+data/
+
+# Training outputs
+artifacts/
+checkpoints/
+runs/
+wandb/
+
+# Model checkpoint files
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+
+# Logs and temporary files
+*.log
+*.tmp

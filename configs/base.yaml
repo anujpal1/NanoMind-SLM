@@ -1,0 +1,20 @@
+project:
+  name: "NanoMind-SLM"
+  seed: 42
+
+paths:
+  data_dir: "data"
+  artifact_dir: "artifacts"
+  checkpoint_dir: "artifacts/checkpoints"
+  log_dir: "artifacts/logs"
+  report_dir: "reports"
+
+runtime:
+  device: "auto"
+  precision: "auto"
+  num_workers: 0
+
+logging:
+  log_every_steps: 10
+  validate_every_steps: 100
+  save_every_steps: 100
