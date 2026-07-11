@@ -36,7 +36,7 @@ required_fields:
 
 sampling:
   seed: 42
-  scan_limit: 10000
+  scan_limit: 50000
   validation_fraction: 0.10
   split_unit: "repository"
   identity_field: "hash"
@@ -44,12 +44,12 @@ sampling:
   deduplicate_by: "hash"
 
   train_limits:
-    max_records: 5000
-    max_characters: 10000000
+    max_records: 15000
+    max_characters: 100000000
 
   validation_limits:
-    max_records: 500
-    max_characters: 1000000
+    max_records: 1500
+    max_characters: 10000000
 
   experiments:
     - "baseline"
