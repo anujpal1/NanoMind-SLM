@@ -24,7 +24,7 @@ htmlcov/
 !.env.example
 
 # Downloaded and processed datasets
-data/
+/data/
 
 # Training outputs
 artifacts/
