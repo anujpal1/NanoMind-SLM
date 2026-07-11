@@ -42,3 +42,4 @@ wandb/
 *.log
 *.tmpdata/tokenizer/
 data/tokenized/
+/release/

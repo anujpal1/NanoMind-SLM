@@ -1,0 +1,9 @@
+{
+  "model": "NanoMind-SLM-60M",
+  "parameters": 18808704,
+  "training_tokens": 62531072,
+  "validation_loss": 2.1562581321001053,
+  "perplexity": 8.638752035951798,
+  "evaluated_batches": 500,
+  "evaluated_tokens": 1024000
+}

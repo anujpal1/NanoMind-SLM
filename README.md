@@ -30,3 +30,31 @@ larger and has seen substantially more data and compute.
 ## Current status
 
 Day 1: repository and development-environment setup.
+
+
+## Final Results
+
+| Metric | Result |
+|---|---:|
+| Architecture | Llama-style decoder-only Transformer |
+| Parameters | 18,808,704 |
+| Vocabulary size | 8,000 |
+| Context length | 256 |
+| Training tokens | 62,531,072 |
+| Validation tokens | 6,277,632 |
+| Validation loss | 2.1563 |
+| Perplexity | 8.64 |
+| Syntax validity | 5/10 (50%) |
+| Model weights | 71.8 MB |
+
+### Research Comparison
+
+| Model | Training tokens | Syntax validity |
+|---|---:|---:|
+| Baseline | Approximately 31M | 1/10 |
+| Earlier quality model | Approximately 31M | 0/10 |
+| Final quality model | 62.5M | **5/10** |
+
+The final model learned recognizable Python structure, but its logical
+correctness remains limited. This is expected for an 18.8M-parameter
+model trained entirely from random initialization.

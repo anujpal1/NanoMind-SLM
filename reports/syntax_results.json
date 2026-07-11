@@ -1,0 +1,57 @@
+{
+  "valid": 5,
+  "total": 10,
+  "syntax_rate": 0.5,
+  "results": [
+    {
+      "prompt": "def add(a, b):",
+      "generated_code": "def add(a, b):\n    \"\"\"Add a new b from the given b.\n",
+      "syntax_valid": false
+    },
+    {
+      "prompt": "def is_even(n):",
+      "generated_code": "def is_even(n):\n    return n.is_even(n)\n",
+      "syntax_valid": true
+    },
+    {
+      "prompt": "def factorial(n):",
+      "generated_code": "def factorial(n):\n    \"\"\"\n    Return the number of the number of iterations for each n.\n",
+      "syntax_valid": false
+    },
+    {
+      "prompt": "def fibonacci(n):",
+      "generated_code": "def fibonacci(n):\n    \"\"\"\n    Return the number of fibonaccis in the fibonacci.\n    \"\"\"\n    return n\n",
+      "syntax_valid": true
+    },
+    {
+      "prompt": "def is_prime(n):",
+      "generated_code": "def is_prime(n):\n    return n.prime == n.prime\n",
+      "syntax_valid": true
+    },
+    {
+      "prompt": "def reverse_string(text):",
+      "generated_code": "def reverse_string(text):\n    \"\"\"\n    Checks if the text is a valid string.\n    \"\"\"\n    return text.replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace('",
+      "syntax_valid": false
+    },
+    {
+      "prompt": "def is_palindrome(text):",
+      "generated_code": "def is_palindrome(text):\n    \"\"\"\n    Checks if the text is a string, return a string.\n    \"\"\"\n    return text.strip()\n",
+      "syntax_valid": true
+    },
+    {
+      "prompt": "def find_maximum(values):",
+      "generated_code": "def find_maximum(values):\n    \"\"\"\n    Return the number of values in the range [0, 1]\n    \"\"\"\n    return _maximum(values)\n",
+      "syntax_valid": true
+    },
+    {
+      "prompt": "class Stack:",
+      "generated_code": "class Stack:\n    def __init__(self, name, value, value, **kwargs):\n        super(Stack, self).__init__(name, value, **kwargs)\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value =",
+      "syntax_valid": false
+    },
+    {
+      "prompt": "class Counter:",
+      "generated_code": "class Counter:\n    def __init__(self, *args, **kwargs):\n        super(Counter, self).__init__(*args, **kwargs)\n        self.args = args\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.",
+      "syntax_valid": false
+    }
+  ]
+}
