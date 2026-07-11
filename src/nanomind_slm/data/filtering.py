@@ -1,7 +1,8 @@
 """Pure functions for filtering streamed source-code records."""
 
+from collections.abc import Collection
 from dataclasses import dataclass
-from typing import Any, Collection
+from typing import Any
 
 
 @dataclass(frozen=True)

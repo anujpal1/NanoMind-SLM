@@ -24,7 +24,7 @@ def stable_digest(
     namespace: str,
 ) -> bytes:
     """Create a repeatable SHA-256 digest for one value."""
-    payload = f"{seed}\0{namespace}\0{value}".encode("utf-8")
+    payload = f"{seed}\0{namespace}\0{value}".encode()
     return sha256(payload).digest()
 
 
