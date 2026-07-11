@@ -1,0 +1,12 @@
+model:
+  vocabulary_size: 8000
+  context_length: 256
+  hidden_size: 384
+  number_of_layers: 10
+  number_of_heads: 6
+  number_of_kv_heads: 2
+  intermediate_size: 1024
+  rope_theta: 10000.0
+  rms_norm_epsilon: 0.00001
+  dropout: 0.0
+  tie_word_embeddings: true
