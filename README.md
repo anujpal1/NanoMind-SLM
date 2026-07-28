@@ -27,6 +27,16 @@ Qwen2.5-Coder-0.5B Base will provide a contextual pretrained baseline.
 NanoMind-SLM is not expected to outperform it because the baseline is much
 larger and has seen substantially more data and compute.
 
+## Model Weights
+
+The trained model, tokenizer, configurations, evaluation reports, and
+inference source are available on Hugging Face:
+
+**[Download NanoMind-SLM-60M](https://huggingface.co/Anujpal01/NanoMind-SLM-60M)**
+
+> “60M” refers to approximately 62.5 million training tokens.  
+> The model itself contains 18.8 million parameters.
+
 ## Current status
 
 Day 1: repository and development-environment setup.
