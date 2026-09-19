@@ -1,6 +1,6 @@
 """Pure utilities for deterministic, leakage-aware dataset sampling."""
 
-from collections.abc import Iterable, Mapping
+from collections.abc import Mapping
 from hashlib import sha256
 from typing import Any, Literal
 
@@ -26,11 +26,6 @@ def stable_digest(
     """Create a repeatable SHA-256 digest for one value."""
     payload = f"{seed}\0{namespace}\0{value}".encode()
     return sha256(payload).digest()
-
-
-def record_fingerprint(record: Mapping[str, Any]) -> str:
-    """Return the dataset-provided content identity."""
-    return _required_string(record, "hash")
 
 
 def repository_key(record: Mapping[str, Any]) -> str:
@@ -59,44 +54,3 @@ def assign_split(
         return "validation"
 
     return "train"
-
-
-def sampling_priority(
-    record: Mapping[str, Any],
-    *,
-    seed: int,
-) -> str:
-    """Return a stable priority shared by both experiments."""
-    digest = stable_digest(
-        record_fingerprint(record),
-        seed=seed,
-        namespace="sampling_priority",
-    )
-    return digest.hex()
-
-
-def find_cross_split_hashes(
-    records: Iterable[Mapping[str, Any]],
-    *,
-    seed: int,
-    validation_fraction: float,
-) -> set[str]:
-    """Find exact content hashes appearing in both dataset splits."""
-    observed_splits: dict[str, DatasetSplit] = {}
-    leaking_hashes: set[str] = set()
-
-    for record in records:
-        fingerprint = record_fingerprint(record)
-        current_split = assign_split(
-            record,
-            seed=seed,
-            validation_fraction=validation_fraction,
-        )
-        previous_split = observed_splits.get(fingerprint)
-
-        if previous_split is not None and previous_split != current_split:
-            leaking_hashes.add(fingerprint)
-        else:
-            observed_splits[fingerprint] = current_split
-
-    return leaking_hashes

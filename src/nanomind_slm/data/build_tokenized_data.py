@@ -1,5 +1,6 @@
 """Build bounded fixed-length token shards without loading full corpora into RAM."""
 
+import hashlib
 import json
 from collections.abc import Iterator
 from pathlib import Path
@@ -10,6 +11,19 @@ import yaml
 from tokenizers import Tokenizer
 
 from nanomind_slm.data.packing import pack_token_sequences
+
+CORPUS_FORMAT = "legacy-blank-line-delimited-sections-v1"
+
+
+def sha256_file(path: Path) -> str:
+    """Return the SHA-256 digest of a local input file."""
+    digest = hashlib.sha256()
+
+    with path.open("rb") as file:
+        for chunk in iter(lambda: file.read(1024 * 1024), b""):
+            digest.update(chunk)
+
+    return digest.hexdigest()
 
 
 def iter_documents(path: Path) -> Iterator[str]:
@@ -50,12 +64,16 @@ def build_split(
     context_length: int,
     shard_token_limit: int,
     dtype: str,
+    eos_token: str,
+    tokenizer_path: Path,
+    tokenizer_sha256: str,
+    corpus_sha256: str,
 ) -> None:
     """Write fixed-length NumPy shards for one experiment and split."""
-    eos_token_id = tokenizer.token_to_id("<eos>")
+    eos_token_id = tokenizer.token_to_id(eos_token)
 
     if eos_token_id is None:
-        raise RuntimeError("Tokenizer does not contain <eos>")
+        raise RuntimeError(f"Tokenizer does not contain {eos_token}")
 
     output_dir = output_root / experiment / split
     output_dir.mkdir(parents=True, exist_ok=True)
@@ -110,6 +128,11 @@ def build_split(
         "dtype": dtype,
         "total_blocks": total_blocks,
         "total_tokens": total_blocks * context_length,
+        "tokenizer_file": str(tokenizer_path),
+        "tokenizer_sha256": tokenizer_sha256,
+        "corpus_file": str(corpus_path),
+        "corpus_sha256": corpus_sha256,
+        "corpus_format": CORPUS_FORMAT,
         "shards": shard_names,
     }
 
@@ -134,18 +157,32 @@ def main() -> None:
     output_root = Path(config["output"]["directory"])
 
     for experiment, paths in config["experiments"].items():
-        tokenizer = Tokenizer.from_file(paths["tokenizer"])
+        tokenizer_path = Path(paths["tokenizer"])
+        tokenizer = Tokenizer.from_file(str(tokenizer_path))
+        tokenizer_sha256 = sha256_file(tokenizer_path)
+        vocabulary_size = int(tokenization["vocabulary_size"])
+
+        if tokenizer.get_vocab_size() != vocabulary_size:
+            raise RuntimeError(
+                f"{experiment} tokenizer has {tokenizer.get_vocab_size()} tokens; "
+                f"expected {vocabulary_size}"
+            )
 
         for split in ("train", "validation"):
+            corpus_path = Path(paths[f"{split}_corpus"])
             build_split(
                 experiment=experiment,
                 split=split,
-                corpus_path=Path(paths[f"{split}_corpus"]),
+                corpus_path=corpus_path,
                 tokenizer=tokenizer,
                 output_root=output_root,
                 context_length=tokenization["context_length"],
                 shard_token_limit=tokenization["shard_token_limit"],
                 dtype=tokenization["output_dtype"],
+                eos_token=tokenization["eos_token"],
+                tokenizer_path=tokenizer_path,
+                tokenizer_sha256=tokenizer_sha256,
+                corpus_sha256=sha256_file(corpus_path),
             )
 
 

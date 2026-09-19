@@ -2,7 +2,6 @@ dataset:
   id: "codeparrot/codeparrot-clean"
   revision: "35a59fb025bc0a102f7d96eac09d145b896d487b"
   split: "train"
-  text_field: "content"
   streaming: true
 
 audit:
@@ -14,7 +13,6 @@ license_policy:
     - "mit"
     - "bsd-2-clause"
     - "bsd-3-clause"
-  reject_unknown: true
 
 filtering:
   min_characters: 100
@@ -38,10 +36,6 @@ sampling:
   seed: 42
   scan_limit: 100000
   validation_fraction: 0.10
-  split_unit: "repository"
-  identity_field: "hash"
-  priority_algorithm: "sha256"
-  deduplicate_by: "hash"
 
   train_limits:
     max_records: 30000
@@ -50,7 +44,3 @@ sampling:
   validation_limits:
     max_records: 3000
     max_characters: 20000000
-
-  experiments:
-    - "baseline"
-    - "quality"

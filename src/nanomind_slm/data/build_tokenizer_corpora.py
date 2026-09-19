@@ -47,6 +47,9 @@ def main() -> None:
     filtering_config = config["filtering"]
     allowed_licenses = set(config["license_policy"]["allow"])
 
+    if dataset_config["streaming"] is not True:
+        raise ValueError("Dataset streaming must remain enabled")
+
     output_dir = Path("data/tokenizer")
     output_dir.mkdir(parents=True, exist_ok=True)
 
@@ -83,7 +86,7 @@ def main() -> None:
         dataset_config["id"],
         split=dataset_config["split"],
         revision=dataset_config["revision"],
-        streaming=True,
+        streaming=dataset_config["streaming"],
     )
 
     dataset = dataset.shuffle(

@@ -1,2 +1,1 @@
-def main() -> None:
-    print("Hello from nanomind-slm!")
+"""NanoMind-SLM model, data, and training package."""

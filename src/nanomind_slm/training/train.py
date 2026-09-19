@@ -19,6 +19,9 @@ from nanomind_slm.training.schedule import cosine_learning_rate
 
 def infinite_batches(loader: DataLoader[Tensor]) -> Iterator[Tensor]:
     """Repeat the DataLoader for as many steps as required."""
+    if len(loader) == 0:
+        raise ValueError("Cannot repeat an empty DataLoader")
+
     while True:
         yield from loader
 
@@ -47,7 +50,7 @@ def load_latest_checkpoint(
     checkpoint = torch.load(
         checkpoint_path,
         map_location=device,
-        weights_only=False,
+        weights_only=True,
     )
 
     model.load_state_dict(checkpoint["model"])
@@ -87,15 +90,19 @@ def save_checkpoint(
 def validate(
     *,
     model: NanoMindModel,
-    batches: Iterator[Tensor],
+    loader: DataLoader[Tensor],
     device: torch.device,
     sequence_length: int,
     number_of_batches: int,
     use_amp: bool,
     amp_dtype: torch.dtype,
 ) -> float:
+    if number_of_batches <= 0:
+        raise ValueError("number_of_batches must be positive")
+
     model.eval()
     total_loss = 0.0
+    batches = infinite_batches(loader)
 
     for _ in range(number_of_batches):
         token_ids = next(batches)[:, :sequence_length].to(device)
@@ -121,7 +128,7 @@ def main() -> None:
     parser.add_argument(
         "--smoke",
         action="store_true",
-        help="Run one small CPU/GPU training step",
+        help="Run a small synthetic CPU training step",
     )
     arguments = parser.parse_args()
 
@@ -133,18 +140,30 @@ def main() -> None:
 
     model_config = NanoMindConfig(**model_data["model"])
     config = training_data["training"]
+    smoke_config = training_data["smoke_test"]
 
     torch.manual_seed(config["seed"])
-    device = automatic_device()
-
-    experiment = config["experiment"]
-    data_root = Path("data/tokenized") / experiment
-
-    batch_size = 1 if arguments.smoke else config["batch_size"]
-    sequence_length = (
-        64 if arguments.smoke else model_config.context_length
+    device = (
+        torch.device(smoke_config["device"])
+        if arguments.smoke
+        else automatic_device()
     )
-    maximum_steps = 1 if arguments.smoke else config["maximum_steps"]
+
+    batch_size = (
+        smoke_config["batch_size"]
+        if arguments.smoke
+        else config["batch_size"]
+    )
+    sequence_length = (
+        smoke_config["sequence_length"]
+        if arguments.smoke
+        else model_config.context_length
+    )
+    maximum_steps = (
+        smoke_config["steps"]
+        if arguments.smoke
+        else config["maximum_steps"]
+    )
     accumulation_steps = (
         1
         if arguments.smoke
@@ -153,23 +172,41 @@ def main() -> None:
 
     generator = torch.Generator().manual_seed(config["seed"])
 
+    if arguments.smoke:
+        data_generator = torch.Generator().manual_seed(config["seed"])
+        train_dataset = torch.randint(
+            0,
+            model_config.vocabulary_size,
+            (max(2, batch_size * 2), sequence_length),
+            generator=data_generator,
+        )
+        validation_dataset = torch.randint(
+            0,
+            model_config.vocabulary_size,
+            (max(1, batch_size), sequence_length),
+            generator=data_generator,
+        )
+    else:
+        experiment = config["experiment"]
+        data_root = Path("data/tokenized") / experiment
+        train_dataset = TokenShardDataset(data_root / "train")
+        validation_dataset = TokenShardDataset(data_root / "validation")
+
     train_loader = DataLoader(
-        TokenShardDataset(data_root / "train"),
+        train_dataset,
         batch_size=batch_size,
         shuffle=True,
         num_workers=0,
         generator=generator,
     )
     validation_loader = DataLoader(
-        TokenShardDataset(data_root / "validation"),
+        validation_dataset,
         batch_size=batch_size,
         shuffle=False,
         num_workers=0,
     )
 
     train_batches = infinite_batches(train_loader)
-    validation_batches = infinite_batches(validation_loader)
-
     model = NanoMindModel(model_config).to(device)
     optimizer = torch.optim.AdamW(
         model.parameters(),
@@ -265,7 +302,7 @@ def main() -> None:
         if should_validate:
             validation_loss = validate(
                 model=model,
-                batches=validation_batches,
+                loader=validation_loader,
                 device=device,
                 sequence_length=sequence_length,
                 number_of_batches=(

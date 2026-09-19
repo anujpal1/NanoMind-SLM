@@ -48,4 +48,4 @@ def test_embedding_weights_are_tied() -> None:
 def test_default_model_matches_parameter_target() -> None:
     model = NanoMindModel(NanoMindConfig())
 
-    assert 15_000_000 <= model.parameter_count() <= 25_000_000
+    assert model.parameter_count() == 18_808_704

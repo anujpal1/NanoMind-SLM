@@ -3,6 +3,12 @@
 This log records research decisions, hypotheses, configurations, errors,
 changes and measured results throughout the project.
 
+> **Historical context:** the hypotheses below record the initial plan, not
+> completed experimental results. AST filtering, a controlled equal-budget
+> baseline-versus-quality ablation, Qwen comparison, MBPP evaluation, and a
+> private functional benchmark were not completed. The final implemented
+> quality filter used license and metadata/length checks only.
+
 ## Project start
 
 - Date: 10 July 2026

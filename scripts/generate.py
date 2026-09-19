@@ -10,10 +10,13 @@ from tokenizers import Tokenizer
 from nanomind_slm.model import NanoMindConfig, NanoMindModel
 
 
-def load_model(model_directory: Path, device: torch.device):
+def load_model(
+    model_directory: Path,
+    device: torch.device,
+) -> tuple[NanoMindModel, NanoMindConfig, Tokenizer]:
     """Load the model, configuration, and tokenizer."""
     config_data = yaml.safe_load(
-        (model_directory / "model.yaml").read_text()
+        (model_directory / "model.yaml").read_text(encoding="utf-8")
     )
     config = NanoMindConfig(**config_data["model"])
 
@@ -22,7 +25,7 @@ def load_model(model_directory: Path, device: torch.device):
     checkpoint = torch.load(
         model_directory / "model.pt",
         map_location=device,
-        weights_only=False,
+        weights_only=True,
     )
     model.load_state_dict(checkpoint["model"])
     model.eval()
@@ -44,6 +47,9 @@ def generate(
     max_new_tokens: int,
 ) -> str:
     """Generate text using deterministic greedy decoding."""
+    if max_new_tokens <= 0:
+        raise ValueError("max_new_tokens must be positive")
+
     prompt_ids = tokenizer.encode(
         prompt,
         add_special_tokens=False,
@@ -51,6 +57,9 @@ def generate(
 
     bos_id = tokenizer.token_to_id("<bos>")
     eos_id = tokenizer.token_to_id("<eos>")
+
+    if bos_id is None or eos_id is None:
+        raise RuntimeError("Tokenizer must define <bos> and <eos>")
 
     generated = [bos_id, *prompt_ids]
 

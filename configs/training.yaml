@@ -1,10 +1,10 @@
 training:
   resume_from_latest: true
   minimum_learning_rate: 0.00003
-  validation_interval: 100
+  validation_interval: 7634
   validation_batches: 20
-  checkpoint_interval: 100
-  checkpoint_directory: "artifacts/checkpoints"
+  checkpoint_interval: 7634
+  checkpoint_directory: "artifacts/checkpoints/quality_60m"
   experiment: "quality"
   batch_size: 4
   gradient_accumulation_steps: 8
@@ -13,8 +13,8 @@ training:
   beta1: 0.9
   beta2: 0.95
   gradient_clip_norm: 1.0
-  warmup_steps: 100
-  maximum_steps: 10000
+  warmup_steps: 300
+  maximum_steps: 7634
   seed: 42
 
 smoke_test:

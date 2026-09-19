@@ -1,70 +1,172 @@
 # NanoMind-SLM
 
-NanoMind-SLM is a two-week machine-learning research project focused on
-building a compact Llama-style decoder-only Transformer for Python code.
+NanoMind-SLM is an educational, decoder-only Transformer trained from random
+initialization on Python source code. The project covers the complete path from
+a revision-pinned streaming dataset through filtering, tokenizer training,
+fixed-length shards, model training, checkpointing, greedy inference, and
+evaluation.
 
-The main model will contain approximately 20 million parameters and will be
-trained from random initialization using a custom byte-level BPE tokenizer.
+The released model is deliberately small and limited. It is useful for learning
+how a code language model is built; it is not a production coding assistant.
 
-## Research questions
+## Released model
 
-1. How much Python syntax, structure and code-generation ability can a compact
-   Llama-style model learn with limited data and free-tier GPU compute?
-2. Does AST-based filtering and deduplication improve a small code model when
-   architecture and training-token budget are controlled?
-
-## Planned experiment
-
-Two models will use the same architecture and training-token budget:
-
-- **Raw model:** trained on minimally filtered Python code.
-- **Filtered model:** trained on AST-validated and deduplicated Python code.
-
-Both will be evaluated using loss, syntax validity, runtime behaviour,
-selected MBPP problems and an original private benchmark.
-
-Qwen2.5-Coder-0.5B Base will provide a contextual pretrained baseline.
-NanoMind-SLM is not expected to outperform it because the baseline is much
-larger and has seen substantially more data and compute.
-
-## Model Weights
-
-The trained model, tokenizer, configurations, evaluation reports, and
-inference source are available on Hugging Face:
-
-**[Download NanoMind-SLM-60M](https://huggingface.co/Anujpal01/NanoMind-SLM-60M)**
-
-> “60M” refers to approximately 62.5 million training tokens.  
-> The model itself contains 18.8 million parameters.
-
-## Current status
-
-Day 1: repository and development-environment setup.
-
-
-## Final Results
-
-| Metric | Result |
+| Property | Value |
 |---|---:|
-| Architecture | Llama-style decoder-only Transformer |
 | Parameters | 18,808,704 |
-| Vocabulary size | 8,000 |
-| Context length | 256 |
-| Training tokens | 62,531,072 |
-| Validation tokens | 6,277,632 |
-| Validation loss | 2.1563 |
-| Perplexity | 8.64 |
-| Syntax validity | 5/10 (50%) |
-| Model weights | 71.8 MB |
+| Vocabulary | 8,000-token byte-level BPE |
+| Context length | 256 tokens |
+| Transformer width | 384 |
+| Layers | 10 |
+| Attention heads | 6 query / 2 key-value |
+| Feed-forward width | 1,024 |
+| Components | GQA, RoPE, RMSNorm, SwiGLU, tied embeddings |
+| Training source | `codeparrot/codeparrot-clean` |
+| Checkpoint size | 75,265,675 bytes (75.3 MB / 71.8 MiB) |
 
-### Research Comparison
+The checkpoint, tokenizer, release configuration, and saved reports are hosted
+in [NanoMind-SLM-60M on Hugging Face](https://huggingface.co/Anujpal01/NanoMind-SLM-60M).
+“60M” describes the roughly 62.5-million-token training corpus, not the model's
+parameter count.
 
-| Model | Training tokens | Syntax validity |
-|---|---:|---:|
-| Baseline | Approximately 31M | 1/10 |
-| Earlier quality model | Approximately 31M | 0/10 |
-| Final quality model | 62.5M | **5/10** |
+### Reported release results
 
-The final model learned recognizable Python structure, but its logical
-correctness remains limited. This is expected for an 18.8M-parameter
-model trained entirely from random initialization.
+| Measurement | Reported value | What it means |
+|---|---:|---|
+| Packed training corpus | 62,531,072 tokens | Tokens stored in complete 256-token blocks |
+| Nominal full-batch schedule | 7,634 optimizer steps | 62,537,728 positions at batch 4 × accumulation 8 × context 256 |
+| Packed validation corpus | 6,277,632 tokens | The release-time prepared validation data |
+| Validation loss | 2.156258 | Saved historical result over 500 batches |
+| Perplexity | 8.638752 | `exp(validation loss)` |
+| Evaluated validation tokens | 1,024,000 | Saved historical result |
+| Python syntax validity | 5/10 | Five saved generations parse as Python |
+
+The historical values are preserved in `reports/final_metrics.json` and
+`reports/syntax_results.json`. The exact release-time validation shards and
+evaluation command were not committed, so the loss and perplexity have not been
+reproduced from a fresh checkout. “5/10 syntax validity” is not pass@1, runtime
+correctness, or a 50% coding-success rate.
+
+For example, this saved completion parses but is not a correct implementation:
+
+```python
+def is_even(n):
+    return n.is_even(n)
+```
+
+Another saved completion starts an unterminated docstring and does not parse.
+The negative examples remain in the repository because they are important
+evidence of the model's limitations.
+
+### Fresh checkpoint verification
+
+On 2026-09-20, the published checkpoint was loaded on CPU with Python 3.14.0
+and PyTorch 2.13.0, then run on the same ten prompts with greedy decoding and a
+96-token limit:
+
+| Inference policy | Syntax-valid outputs |
+|---|---:|
+| Current default, with `<bos>` | 8/10 |
+| A/B variant, without `<bos>` | 6/10 |
+
+The [BOS report](reports/syntax_verification_bos_2026-09-20.json) and
+[no-BOS report](reports/syntax_verification_no_bos_2026-09-20.json) record the
+checkpoint/tokenizer hashes, runtime, decoding policy, and complete outputs.
+They are a new environment-specific verification, not a replacement for the
+historical 5/10 report, and neither score measures functional correctness.
+
+## Run the released checkpoint
+
+The project supports Python 3.11–3.14 and uses
+[uv](https://docs.astral.sh/uv/). From a fresh clone:
+
+```console
+uv sync --locked
+uv run --with huggingface-hub hf download Anujpal01/NanoMind-SLM-60M --revision e748230aaef5e660221758c2c04330bd17be32a2 --local-dir release/NanoMind-SLM-60M
+uv run python scripts/generate.py --model-dir release/NanoMind-SLM-60M --prompt "def add(a, b):" --max-new-tokens 32
+```
+
+Inference is greedy and deterministic for a fixed software/hardware environment.
+It prepends `<bos>`, stops at `<eos>`, and loads the state-dictionary checkpoint
+with PyTorch's restricted `weights_only=True` loader.
+
+## Quick verification
+
+The smoke command uses deterministic synthetic tokens; it does not require a
+dataset download or prebuilt shards:
+
+```console
+uv run python -m nanomind_slm.training.train --smoke
+```
+
+Run the fixed ten-prompt syntax evaluation against the downloaded release:
+
+```console
+uv run python scripts/evaluate.py --checkpoint release/NanoMind-SLM-60M/model.pt --model-config release/NanoMind-SLM-60M/model.yaml --tokenizer release/NanoMind-SLM-60M/tokenizer/tokenizer.json --device cpu
+```
+
+Validation loss additionally requires `--validation-manifest` pointing to
+prepared shards produced by the same tokenizer. New manifests record the
+tokenizer SHA-256, and evaluation rejects a recorded mismatch. The small ignored
+shards in the original development folder use an earlier tokenizer and are not
+valid release-checkpoint evaluation data.
+
+## Data-to-demo flow
+
+```text
+revision-pinned CodeParrot stream
+  → bounded metadata/license filtering and repository-level split
+  → separate baseline and quality byte-level BPE tokenizers
+  → packed 256-token NumPy shards
+  → Llama-style causal-language-model training
+  → state-dictionary checkpoint
+  → greedy generation and finite evaluation
+```
+
+The active commands are:
+
+```console
+uv run python scripts/audit_dataset.py
+uv run python -m nanomind_slm.data.build_tokenizer_corpora
+uv run python -m nanomind_slm.data.train_tokenizers
+uv run python -m nanomind_slm.data.build_tokenized_data
+uv run python -m nanomind_slm.training.train
+```
+
+`configs/training.yaml` now matches the published final-run schedule. Earlier
+10,000-step exploratory settings remain visible in Git history rather than being
+presented as the release reproduction default.
+
+## Important limitations and provenance
+
+- The implemented “quality” filter checks license, content length,
+  autogenerated metadata, and longest-line length. It does **not** call
+  `ast.parse`; the released corpus must not be described as AST-validated.
+- The published corpus writer separated files with blank lines, while the
+  tokenizer-shard builder treated every blank line as a document boundary.
+  Internal blank lines could therefore add `<eos>` inside a source file. This
+  historical behavior is retained for checkpoint provenance. Correcting it
+  requires a versioned preprocessing pipeline, retraining, and reevaluation.
+- Baseline and quality experiments used separately trained tokenizers and did
+  not have a demonstrated equal training budget. Their saved 1/10, 0/10, and
+  5/10 syntax observations are historical notes, not a controlled proof that
+  filtering caused the difference.
+- `<bos>` was defined by tokenizer training but was not inserted in the packed
+  training sequences; the released inference demo prepends it. The recorded
+  96-token CPU A/B produced 8/10 parseable outputs with `<bos>` and 6/10 without
+  it, so the default was retained. This does not establish semantic correctness.
+- Checkpoints restore the model, optimizer, scaler, and completed step, but not
+  the exact shuffled-sampler/RNG position. Resume is practical, not bit-exact.
+- Current periodic validation restarts from the same deterministic validation
+  prefix. The released run's older loop advanced through successive validation
+  batches, so its intermediate validation points should not be compared as if
+  they used an identical subset.
+- No Qwen comparison, MBPP evaluation, functional-correctness benchmark, or
+  controlled filtering-only ablation was completed.
+- Neither this repository nor the published model currently declares a license.
+  Do not describe either artifact as licensed for open-source reuse until an
+  appropriate license is deliberately selected and added.
+
+See `docs/dataset_plan.md` for detailed data provenance and the boundary-format
+decision. The Git history and `v1.0.0` tag preserve the real development
+milestones rather than replacing them with a cleaned-up origin story.

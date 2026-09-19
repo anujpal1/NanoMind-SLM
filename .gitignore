@@ -40,6 +40,6 @@ wandb/
 
 # Logs and temporary files
 *.log
-*.tmpdata/tokenizer/
+*.tmp
 data/tokenized/
 /release/
