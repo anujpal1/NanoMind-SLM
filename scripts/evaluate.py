@@ -1,4 +1,4 @@
-"""Reproduce NanoMind validation and Python-syntax measurements.
+"""Reproduce NanoMind validation and Python source-code measurements.
 
 This evaluator is deliberately finite and read-only: it walks the prepared
 validation manifest once (or stops at ``--validation-batches``), uses greedy
@@ -56,7 +56,7 @@ def inspect_validation_provenance(
     tokenizer_sha256: str,
     allow_unverified: bool = False,
 ) -> dict[str, Any]:
-    """Check tokenizer provenance when a prepared manifest records its hash."""
+    """Read validation provenance and check the recorded tokenizer hash."""
     with manifest_path.open(encoding="utf-8") as file:
         manifest = json.load(file)
 
@@ -89,6 +89,11 @@ def inspect_validation_provenance(
         "context_length": manifest.get("context_length"),
         "declared_total_blocks": manifest.get("total_blocks"),
         "declared_total_tokens": manifest.get("total_tokens"),
+        "tokenizer_file": manifest.get("tokenizer_file"),
+        "corpus_file": manifest.get("corpus_file"),
+        "corpus_sha256": manifest.get("corpus_sha256"),
+        "corpus_format": manifest.get("corpus_format"),
+        "shard_sha256": manifest.get("shard_sha256"),
         "tokenizer_compatibility": compatibility,
     }
 
@@ -123,8 +128,7 @@ def load_model(
     if not isinstance(state_dict, Mapping) or not state_dict:
         raise ValueError("Checkpoint must be a state dictionary or contain 'model'")
     if not all(
-        isinstance(name, str) and isinstance(value, Tensor)
-        for name, value in state_dict.items()
+        isinstance(name, str) and isinstance(value, Tensor) for name, value in state_dict.items()
     ):
         raise ValueError("Checkpoint model state must contain only named tensors")
 
@@ -251,10 +255,19 @@ def generate_greedy(
     return tokenizer.decode(decoded_ids, skip_special_tokens=True)
 
 
-def is_python_syntax_valid(source: str) -> bool:
-    """Return whether Python's parser accepts the complete generated text."""
+def is_ast_parseable(source: str) -> bool:
+    """Return whether ``ast.parse`` accepts the complete generated text."""
     try:
         ast.parse(source)
+    except SyntaxError:
+        return False
+    return True
+
+
+def is_compile_valid(source: str) -> bool:
+    """Return whether Python can compile the text, without executing it."""
+    try:
+        compile(source, "<generated>", "exec")
     except SyntaxError:
         return False
     return True
@@ -270,7 +283,7 @@ def evaluate_syntax(
     maximum_new_tokens: int,
     use_bos: bool,
 ) -> dict[str, Any]:
-    """Generate for an explicit prompt sequence and measure parse validity."""
+    """Measure AST parseability and compile validity for generated Python."""
     if not prompts:
         raise ValueError("At least one syntax prompt is required")
     if not all(isinstance(prompt, str) and prompt for prompt in prompts):
@@ -278,7 +291,8 @@ def evaluate_syntax(
 
     model.eval()
     results = []
-    valid_count = 0
+    ast_parseable_count = 0
+    compile_valid_count = 0
     for prompt in prompts:
         generated_code = generate_greedy(
             prompt=prompt,
@@ -289,20 +303,25 @@ def evaluate_syntax(
             maximum_new_tokens=maximum_new_tokens,
             use_bos=use_bos,
         )
-        syntax_valid = is_python_syntax_valid(generated_code)
-        valid_count += int(syntax_valid)
+        ast_parseable = is_ast_parseable(generated_code)
+        compile_valid = is_compile_valid(generated_code)
+        ast_parseable_count += int(ast_parseable)
+        compile_valid_count += int(compile_valid)
         results.append(
             {
                 "prompt": prompt,
                 "generated_code": generated_code,
-                "syntax_valid": syntax_valid,
+                "ast_parseable": ast_parseable,
+                "compile_valid": compile_valid,
             }
         )
 
     return {
-        "valid": valid_count,
+        "ast_parseable_count": ast_parseable_count,
+        "compile_valid_count": compile_valid_count,
         "total": len(prompts),
-        "syntax_rate": valid_count / len(prompts),
+        "ast_parseable_rate": ast_parseable_count / len(prompts),
+        "compile_valid_rate": compile_valid_count / len(prompts),
         "decoding": {
             "strategy": "greedy_argmax",
             "add_special_tokens": False,
@@ -311,7 +330,7 @@ def evaluate_syntax(
             "maximum_new_tokens": maximum_new_tokens,
             "context_length": config.context_length,
             "context_truncation": "left",
-            "parse_scope": "prompt_and_generated_text",
+            "source_scope": "prompt_and_generated_text",
         },
         "results": results,
     }
@@ -342,7 +361,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description=(
             "Evaluate a NanoMind checkpoint on finite validation shards and "
-            "fixed Python syntax prompts."
+            "fixed Python source-code prompts."
         )
     )
     parser.add_argument("--checkpoint", type=Path, required=True)
@@ -350,7 +369,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--validation-manifest",
         type=Path,
-        help="Prepared validation manifest; omit for syntax-only evaluation.",
+        help="Prepared validation manifest; omit for source-check-only evaluation.",
     )
     parser.add_argument("--tokenizer", type=Path, required=True)
     parser.add_argument(
@@ -376,7 +395,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument(
         "--no-bos",
         action="store_true",
-        help="Run the syntax A/B policy without the default <bos> prefix.",
+        help="Run the source-check A/B policy without the default <bos> prefix.",
     )
     parser.add_argument(
         "--device",

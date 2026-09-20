@@ -36,8 +36,10 @@ quality. In particular, `src/nanomind_slm/data/filtering.py` does not use
 
 ## Bounded audit evidence
 
-The original revision-pinned audit inspected the first 1,000 streamed records
-without printing or storing their source:
+The historical 2026-07-10 audit inspected the first 1,000 streamed records
+without printing or storing their source. Its three audit scripts called
+`load_dataset` without a `revision` argument, so these are **unpinned historical
+observations**, not evidence tied to a specific dataset revision:
 
 | Observation | Count |
 |---|---:|
@@ -48,9 +50,20 @@ without printing or storing their source:
 | Additional oversized-file rejections | 4 |
 
 Declared file sizes ranged from 1,028 to 456,237 characters, with a mean of
-10,641.16. These figures describe one bounded prefix of the pinned stream, not
-the entire dataset. `scripts/audit_dataset.py` consolidates the former three
-inspection scripts and reruns this check using the configured revision.
+10,641.16.
+
+On 2026-09-20, `scripts/audit_dataset.py` successfully repeated the audit with
+the configured revision
+`35a59fb025bc0a102f7d96eac09d145b896d487b`. That pinned run inspected 1,000
+records, accepted 599 with the baseline filter and 595 with the quality filter,
+and reproduced the same size summary and rejection counts shown above. This is
+new revision-pinned evidence; it does not retroactively make the 2026-07-10 run
+pinned.
+
+Both runs describe the first 1,000 records returned by their respective
+streams, not a random sample or a dataset-wide estimate. The consolidated
+script is bounded, requires streaming mode, checks the expected schema, and
+does not print or store source code.
 
 ## Tokenizers and packing
 
@@ -77,8 +90,9 @@ version, and produce a separately named checkpoint after retraining and
 reevaluation. The published checkpoint must not be described as having used the
 corrected semantics.
 
-New shard manifests include the exact tokenizer SHA-256 so evaluation can reject
-incompatible token IDs. Older manifests without this field have unverified
+New shard manifests include exact tokenizer, corpus, and per-shard SHA-256
+values so an evaluation's inputs can be identified and incompatible token IDs
+can be rejected. Older manifests without a tokenizer hash have unverified
 tokenizer provenance and require explicit acknowledgement in the evaluator.
 
 ## Experiment interpretation
@@ -100,8 +114,25 @@ reconstructed and should not be asserted as the corpus size.
 ## Reproduction status
 
 The released model configuration, tokenizer, checkpoint, and metric JSON are
-available on Hugging Face. The exact release-time validation shards were not
-committed to GitHub. The smaller local development shards were produced with an
-earlier tokenizer and are not compatible evaluation data for the release
-checkpoint, so the historical validation loss remains reported rather than
-freshly reproduced.
+available on Hugging Face. The exact release-time validation corpus, shard
+hashes, and evaluation command were not committed. The smaller local development
+shards were produced with an earlier tokenizer and are not compatible evaluation
+data for the release checkpoint.
+
+On 2026-09-20, the current pinned builder scanned 100,000 records and rebuilt a
+quality-validation corpus containing 2,295 accepted records and 19,999,789
+source characters. Its SHA-256 is
+`66b125c8bfafe0340365d618091d045138178fc4643ebe9a1e320e3ea04c9dc1`.
+Packing that corpus with the released tokenizer (SHA-256
+`412483f17f31fcfe6af8a8b5ccfda5777177222c0d612c5e253aa61bf7b3c75e`)
+produced 24,569 complete 256-token blocks, or 6,289,664 tokens. That differs
+from the historical 6,277,632-token validation corpus by 12,032 tokens, so it
+cannot establish that the original evaluation inputs were recovered.
+
+A new finite CPU evaluation on the rebuilt shards measured loss 2.159504 and
+perplexity 8.666837 over 500 batches, 4,000 sequences, and 1,020,000 predicted
+tokens. It is recorded separately in
+`reports/pinned_rebuild_evaluation_bos_2026-09-20.json`, together with the data
+configuration, corpus, manifest, tokenizer, checkpoint, and per-shard hashes.
+It is a new measurement, not a reproduction or replacement of the unchanged
+historical 2.156258 loss.

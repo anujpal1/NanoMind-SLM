@@ -61,3 +61,9 @@ def test_build_split_records_exact_input_hashes(tmp_path: Path) -> None:
     assert manifest["tokenizer_file"] == str(tokenizer_path)
     assert manifest["corpus_file"] == str(corpus_path)
     assert manifest["corpus_format"] == CORPUS_FORMAT
+    assert manifest["shard_sha256"] == {
+        shard_name: hashlib.sha256(
+            (manifest_path.parent / shard_name).read_bytes()
+        ).hexdigest()
+        for shard_name in manifest["shards"]
+    }

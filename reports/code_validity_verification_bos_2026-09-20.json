@@ -1,0 +1,100 @@
+{
+  "artifacts": {
+    "checkpoint": "release\\NanoMind-SLM-60M\\model.pt",
+    "checkpoint_sha256": "154bf1b3847bbca7ba735f4152468e3a3e2f1ba9c45adb236767b0d1f6cc5734",
+    "model_config": "release\\NanoMind-SLM-60M\\model.yaml",
+    "model_config_sha256": "1ba1daa9d1938a491bd288f095280753a1c4feae5f1931de50ea2f535bee5544",
+    "tokenizer": "release\\NanoMind-SLM-60M\\tokenizer\\tokenizer.json",
+    "tokenizer_sha256": "412483f17f31fcfe6af8a8b5ccfda5777177222c0d612c5e253aa61bf7b3c75e",
+    "prompt_source": "built_in_v1"
+  },
+  "runtime": {
+    "python": "3.14.0",
+    "torch": "2.13.0+cpu",
+    "device": "cpu"
+  },
+  "validation_data": null,
+  "validation": {
+    "status": "skipped",
+    "reason": "no validation manifest supplied"
+  },
+  "syntax": {
+    "ast_parseable_count": 8,
+    "compile_valid_count": 7,
+    "total": 10,
+    "ast_parseable_rate": 0.8,
+    "compile_valid_rate": 0.7,
+    "decoding": {
+      "strategy": "greedy_argmax",
+      "add_special_tokens": false,
+      "bos_prefix": true,
+      "stop_at_eos": true,
+      "maximum_new_tokens": 96,
+      "context_length": 256,
+      "context_truncation": "left",
+      "source_scope": "prompt_and_generated_text"
+    },
+    "results": [
+      {
+        "prompt": "def add(a, b):",
+        "generated_code": "def add(a, b):\n    \"\"\"Add a new b from the given b.\n",
+        "ast_parseable": false,
+        "compile_valid": false
+      },
+      {
+        "prompt": "def is_even(n):",
+        "generated_code": "def is_even(n):\n    return n.is_even(n)\n",
+        "ast_parseable": true,
+        "compile_valid": true
+      },
+      {
+        "prompt": "def factorial(n):",
+        "generated_code": "def factorial(n):\n    \"\"\"\n    Return the number of the number of iterations for each n.\n",
+        "ast_parseable": false,
+        "compile_valid": false
+      },
+      {
+        "prompt": "def fibonacci(n):",
+        "generated_code": "def fibonacci(n):\n    \"\"\"\n    Return the number of fibonaccis in the fibonacci.\n    \"\"\"\n    return n\n",
+        "ast_parseable": true,
+        "compile_valid": true
+      },
+      {
+        "prompt": "def is_prime(n):",
+        "generated_code": "def is_prime(n):\n    return n.prime == n.prime\n",
+        "ast_parseable": true,
+        "compile_valid": true
+      },
+      {
+        "prompt": "def reverse_string(text):",
+        "generated_code": "def reverse_string(text):\n    \"\"\"\n    Checks if the text is a valid string.\n    \"\"\"\n    return text.replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace(' ', ' ').replace",
+        "ast_parseable": true,
+        "compile_valid": true
+      },
+      {
+        "prompt": "def is_palindrome(text):",
+        "generated_code": "def is_palindrome(text):\n    \"\"\"\n    Checks if the text is a string, and the text is a string.\n    \"\"\"\n    return text.strip()\n",
+        "ast_parseable": true,
+        "compile_valid": true
+      },
+      {
+        "prompt": "def find_maximum(values):",
+        "generated_code": "def find_maximum(values):\n    \"\"\"\n    Return the number of values in the range [0, 1]\n    \"\"\"\n    return _maximum(values)\n",
+        "ast_parseable": true,
+        "compile_valid": true
+      },
+      {
+        "prompt": "class Stack:",
+        "generated_code": "class Stack:\n    def __init__(self, name, value, value, **kwargs):\n        super(Stack, self).__init__(name, value, **kwargs)\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value = value\n        self.value",
+        "ast_parseable": true,
+        "compile_valid": false
+      },
+      {
+        "prompt": "class Counter:",
+        "generated_code": "class Counter:\n    def __init__(self, *args, **kwargs):\n        super(Counter, self).__init__(*args, **kwargs)\n        self.args = args\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self.kwargs = kwargs\n        self",
+        "ast_parseable": true,
+        "compile_valid": true
+      }
+    ]
+  }
+}

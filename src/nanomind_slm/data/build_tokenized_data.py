@@ -134,6 +134,10 @@ def build_split(
         "corpus_sha256": corpus_sha256,
         "corpus_format": CORPUS_FORMAT,
         "shards": shard_names,
+        "shard_sha256": {
+            shard_name: sha256_file(output_dir / shard_name)
+            for shard_name in shard_names
+        },
     }
 
     with (output_dir / "manifest.json").open(

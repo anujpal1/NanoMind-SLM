@@ -39,13 +39,27 @@ parameter count.
 | Validation loss | 2.156258 | Saved historical result over 500 batches |
 | Perplexity | 8.638752 | `exp(validation loss)` |
 | Evaluated validation tokens | 1,024,000 | Saved historical result |
-| Python syntax validity | 5/10 | Five saved generations parse as Python |
+| AST-parseable saved outputs | 5/10 | `ast.parse` accepts five saved generations |
+| Compile-valid saved outputs | 5/10 | `compile(..., "exec")` accepts the same five saved generations |
 
-The historical values are preserved in `reports/final_metrics.json` and
-`reports/syntax_results.json`. The exact release-time validation shards and
-evaluation command were not committed, so the loss and perplexity have not been
-reproduced from a fresh checkout. “5/10 syntax validity” is not pass@1, runtime
-correctness, or a 50% coding-success rate.
+The historical values are preserved unchanged in `reports/final_metrics.json`
+and `reports/syntax_results.json`. The older syntax report uses the ambiguous
+field name `syntax_valid`; it actually records `ast.parse` acceptance. A new
+post-hoc compile check of those preserved outputs also accepts 5/10. Compilation
+uses `compile(source, "<generated>", "exec")` and never executes generated code.
+Neither AST parsing nor compilation measures functional correctness, pass@1, or
+coding success.
+
+The exact release-time validation corpus, shard hashes, and evaluation command
+were not retained, so the historical loss and perplexity cannot be claimed as
+freshly reproduced. A 2026-09-20 rebuild with the current pinned pipeline and
+released tokenizer produced 6,289,664 packed validation tokens, rather than the
+historical 6,277,632. A new finite 500-batch CPU evaluation on that rebuilt input
+measured loss **2.159504** and perplexity **8.666837** over 4,000 sequences and
+1,020,000 predicted tokens. This is a separate measurement, not a reproduction
+or replacement of the historical 2.156258 loss. The
+[pinned-rebuild report](reports/pinned_rebuild_evaluation_bos_2026-09-20.json)
+records the configuration and input hashes.
 
 For example, this saved completion parses but is not a correct implementation:
 
@@ -64,16 +78,19 @@ On 2026-09-20, the published checkpoint was loaded on CPU with Python 3.14.0
 and PyTorch 2.13.0, then run on the same ten prompts with greedy decoding and a
 96-token limit:
 
-| Inference policy | Syntax-valid outputs |
-|---|---:|
-| Current default, with `<bos>` | 8/10 |
-| A/B variant, without `<bos>` | 6/10 |
+| Inference policy | AST-parseable | Compile-valid |
+|---|---:|---:|
+| Current default, with `<bos>` | 8/10 | 7/10 |
+| A/B variant, without `<bos>` | 6/10 | 4/10 |
 
-The [BOS report](reports/syntax_verification_bos_2026-09-20.json) and
-[no-BOS report](reports/syntax_verification_no_bos_2026-09-20.json) record the
-checkpoint/tokenizer hashes, runtime, decoding policy, and complete outputs.
-They are a new environment-specific verification, not a replacement for the
-historical 5/10 report, and neither score measures functional correctness.
+`ast.parse` builds an abstract syntax tree, while `compile(..., "exec")` applies
+additional compiler checks such as rejecting duplicate function arguments.
+Neither check executes the generated code. The corrected
+[BOS report](reports/code_validity_verification_bos_2026-09-20.json) and
+[no-BOS report](reports/code_validity_verification_no_bos_2026-09-20.json)
+record both measurements, artifact hashes, runtime, decoding policy, and full
+outputs. The original `syntax_verification_*.json` files remain unchanged as
+historical AST-only reports.
 
 ## Run the released checkpoint
 
@@ -99,17 +116,18 @@ dataset download or prebuilt shards:
 uv run python -m nanomind_slm.training.train --smoke
 ```
 
-Run the fixed ten-prompt syntax evaluation against the downloaded release:
+Run the fixed ten-prompt source-validity evaluation against the downloaded
+release:
 
 ```console
 uv run python scripts/evaluate.py --checkpoint release/NanoMind-SLM-60M/model.pt --model-config release/NanoMind-SLM-60M/model.yaml --tokenizer release/NanoMind-SLM-60M/tokenizer/tokenizer.json --device cpu
 ```
 
 Validation loss additionally requires `--validation-manifest` pointing to
-prepared shards produced by the same tokenizer. New manifests record the
-tokenizer SHA-256, and evaluation rejects a recorded mismatch. The small ignored
-shards in the original development folder use an earlier tokenizer and are not
-valid release-checkpoint evaluation data.
+prepared shards produced by the same tokenizer. New manifests record tokenizer,
+corpus, and shard SHA-256 values, and evaluation rejects a recorded tokenizer
+mismatch. The small ignored shards in the original development folder use an
+earlier tokenizer and are not valid release-checkpoint evaluation data.
 
 ## Data-to-demo flow
 
@@ -153,8 +171,9 @@ presented as the release reproduction default.
   filtering caused the difference.
 - `<bos>` was defined by tokenizer training but was not inserted in the packed
   training sequences; the released inference demo prepends it. The recorded
-  96-token CPU A/B produced 8/10 parseable outputs with `<bos>` and 6/10 without
-  it, so the default was retained. This does not establish semantic correctness.
+  96-token CPU A/B produced 8/10 AST-parseable and 7/10 compile-valid outputs
+  with `<bos>`, versus 6/10 and 4/10 without it. This does not establish semantic
+  or functional correctness.
 - Checkpoints restore the model, optimizer, scaler, and completed step, but not
   the exact shuffled-sampler/RNG position. Resume is practical, not bit-exact.
 - Current periodic validation restarts from the same deterministic validation
@@ -168,5 +187,8 @@ presented as the release reproduction default.
   appropriate license is deliberately selected and added.
 
 See `docs/dataset_plan.md` for detailed data provenance and the boundary-format
-decision. The Git history and `v1.0.0` tag preserve the real development
-milestones rather than replacing them with a cleaned-up origin story.
+decision. A publish-ready corrected Hugging Face description is in
+`docs/huggingface_model_card.md`; the downloaded release directory is a snapshot,
+not a writable model-card checkout. The Git history and `v1.0.0` tag preserve
+the real development milestones rather than replacing them with a cleaned-up
+origin story.

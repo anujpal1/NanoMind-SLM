@@ -28,6 +28,15 @@ evaluate = importlib.util.module_from_spec(EVALUATE_SPEC)
 sys.modules[EVALUATE_SPEC.name] = evaluate
 EVALUATE_SPEC.loader.exec_module(evaluate)
 
+GENERATE_SPEC = importlib.util.spec_from_file_location(
+    "nanomind_generate",
+    Path(__file__).parents[1] / "scripts" / "generate.py",
+)
+assert GENERATE_SPEC is not None and GENERATE_SPEC.loader is not None
+generate = importlib.util.module_from_spec(GENERATE_SPEC)
+sys.modules[GENERATE_SPEC.name] = generate
+GENERATE_SPEC.loader.exec_module(generate)
+
 
 class UniformModel(nn.Module):
     """Return a uniform four-token distribution for exact metric checks."""
@@ -242,6 +251,34 @@ def test_greedy_generation_records_bos_policy_and_stops_before_eos(
     assert model.inputs == expected_inputs
 
 
+def test_release_demo_and_evaluator_generation_stay_in_parity() -> None:
+    demo_model = ScriptedModel()
+    evaluator_model = ScriptedModel()
+    config = SimpleNamespace(context_length=4)
+    tokenizer = FakeTokenizer()
+
+    demo_output = generate.generate(
+        prompt="pass",
+        model=demo_model,  # type: ignore[arg-type]
+        config=config,  # type: ignore[arg-type]
+        tokenizer=tokenizer,  # type: ignore[arg-type]
+        device=torch.device("cpu"),
+        max_new_tokens=3,
+    )
+    evaluator_output = evaluate.generate_greedy(
+        prompt="pass",
+        model=evaluator_model,  # type: ignore[arg-type]
+        config=config,  # type: ignore[arg-type]
+        tokenizer=tokenizer,  # type: ignore[arg-type]
+        device=torch.device("cpu"),
+        maximum_new_tokens=3,
+        use_bos=True,
+    )
+
+    assert demo_output == evaluator_output == "pass"
+    assert demo_model.inputs == evaluator_model.inputs
+
+
 @pytest.mark.parametrize(
     ("source", "expected"),
     [
@@ -249,8 +286,15 @@ def test_greedy_generation_records_bos_policy_and_stops_before_eos(
         ("def invalid(:\n    pass\n", False),
     ],
 )
-def test_syntax_check_uses_python_parser(source: str, expected: bool) -> None:
-    assert evaluate.is_python_syntax_valid(source) is expected
+def test_ast_parseability_uses_python_parser(source: str, expected: bool) -> None:
+    assert evaluate.is_ast_parseable(source) is expected
+
+
+def test_compile_rejects_duplicate_arguments_accepted_by_ast_parser() -> None:
+    source = "def duplicate(value, value):\n    return value\n"
+
+    assert evaluate.is_ast_parseable(source) is True
+    assert evaluate.is_compile_valid(source) is False
 
 
 def test_manifest_rejects_recorded_tokenizer_mismatch(tmp_path: Path) -> None:
@@ -290,6 +334,36 @@ def test_manifest_requires_opt_in_when_tokenizer_hash_is_missing(tmp_path: Path)
     assert provenance["tokenizer_compatibility"]["status"] == "unverified"
 
 
+def test_manifest_provenance_includes_recorded_input_hashes(tmp_path: Path) -> None:
+    manifest_path = write_manifest(
+        tmp_path,
+        np.array([[0, 1, 2, 3]], dtype=np.uint16),
+    )
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest.update(
+        {
+            "tokenizer_sha256": "a" * 64,
+            "tokenizer_file": "tokenizer.json",
+            "corpus_file": "validation.txt",
+            "corpus_sha256": "b" * 64,
+            "corpus_format": "test-format-v1",
+            "shard_sha256": {"shard_00000.npy": "c" * 64},
+        }
+    )
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    provenance = evaluate.inspect_validation_provenance(
+        manifest_path=manifest_path,
+        tokenizer_sha256="a" * 64,
+    )
+
+    assert provenance["tokenizer_file"] == "tokenizer.json"
+    assert provenance["corpus_file"] == "validation.txt"
+    assert provenance["corpus_sha256"] == "b" * 64
+    assert provenance["corpus_format"] == "test-format-v1"
+    assert provenance["shard_sha256"] == {"shard_00000.npy": "c" * 64}
+
+
 def test_cli_runs_both_evaluations_on_tiny_artifacts(
     tmp_path: Path,
     capsys: pytest.CaptureFixture[str],
@@ -326,8 +400,19 @@ def test_cli_runs_both_evaluations_on_tiny_artifacts(
     assert result["validation"]["evaluated_sequences"] == 2
     assert result["validation"]["status"] == "completed"
     assert result["validation"]["input_tokens"] == 8
-    assert result["syntax"]["valid"] == 1
+    assert result["syntax"]["ast_parseable_count"] == 1
+    assert result["syntax"]["compile_valid_count"] == 1
     assert result["syntax"]["total"] == 1
+    assert result["syntax"]["ast_parseable_rate"] == 1.0
+    assert result["syntax"]["compile_valid_rate"] == 1.0
+    assert result["syntax"]["results"] == [
+        {
+            "prompt": "pass",
+            "generated_code": "pass",
+            "ast_parseable": True,
+            "compile_valid": True,
+        }
+    ]
     assert result["syntax"]["decoding"] == {
         "strategy": "greedy_argmax",
         "add_special_tokens": False,
@@ -336,7 +421,7 @@ def test_cli_runs_both_evaluations_on_tiny_artifacts(
         "maximum_new_tokens": 2,
         "context_length": 4,
         "context_truncation": "left",
-        "parse_scope": "prompt_and_generated_text",
+        "source_scope": "prompt_and_generated_text",
     }
 
 
